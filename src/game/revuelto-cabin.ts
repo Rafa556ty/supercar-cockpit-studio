@@ -561,7 +561,7 @@ export function buildRevueltoCabin(car: THREE.Group, accent?: THREE.Material) {
   for (const s of [-1, 1]) {
     const fork = s < 0 ? -0.45 : 0.55;
     const end = s * 0.8;
-    for (const [a, b] of [[[fork, 0.725], [end, 0.725]], [[fork, 0.725], [end, 0.765]], [[fork, 0.725], [end, 0.69]]] as [number, number][][]) {
+    for (const [a, b] of [[[fork, 0.725], [end, 0.725]], [[fork, 0.725], [end, 0.765]], [[fork, 0.725], [end, 0.69]]] as [[number, number], [number, number]][]) {
       const { geo, m: bm } = beam(V(a[0], a[1], -0.597), V(b[0], b[1], -0.597), 0.028, 0.012, V(0, 1, 0));
       kit.add(geo, m.carbon, bm);
     }
@@ -638,7 +638,7 @@ export function buildRevueltoCabin(car: THREE.Group, accent?: THREE.Material) {
     const face = x - s * 0.022;
     kit.add(new THREE.BoxGeometry(0.06, 0.035, 0.55), m.accent, place(V(face - s * 0.02, 0.58, 0.02)));
     kit.add(new THREE.BoxGeometry(0.01, 0.17, 0.5), m.quilt, place(V(face, 0.42, 0.05)));
-    for (const [a, b] of [[[0.38, 0.75], [0.0, 0.75]], [[0.0, 0.75], [-0.38, 0.85]], [[0.0, 0.75], [-0.38, 0.66]]] as [number, number][][]) {
+    for (const [a, b] of [[[0.38, 0.75], [0.0, 0.75]], [[0.0, 0.75], [-0.38, 0.85]], [[0.0, 0.75], [-0.38, 0.66]]] as [[number, number], [number, number]][]) {
       const { geo, m: bm } = beam(V(face, a[1], a[0]), V(face, b[1], b[0]), 0.03, 0.01, V(0, 1, 0));
       kit.add(geo, m.carbon, bm);
     }
