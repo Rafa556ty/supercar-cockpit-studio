@@ -26,6 +26,7 @@ import { lampRole, lampLevels, DARK_BY_DAY, type LampRole } from "./player-light
 import { FOOTPRINTS, TRAFFIC_DRAW_AHEAD } from "./traffic-rules";
 import { CAMERA_POSES, nextCameraView, type CameraView } from "./camera-views";
 import { COCKPIT_FOV, COCKPIT_SEATS, hasCockpit, steeringWheelAngle } from "./cockpit";
+import { updateRevueltoCluster } from "./revuelto-cabin";
 import {
   stepAero,
   stepTrafficWing,
@@ -288,7 +289,7 @@ export class Scene3D {
     this.playerTail = []; this.playerHead = []; this.playerBrakeOnly = [];
     this.playerWipers = []; this.playerWheels = []; this.lightHalos = []; this.flames = [];
     this.engineBrakeLight = null; this.wing = undefined; this.chironRig = null;
-    this.steeringWheel = null; this.cabinOnly = [];
+    this.steeringWheel = null; this.cabinOnly = []; this.clusterScreen = null;
     this.playerKey = key;
     this.setupPlayer(template.clone(true));
     this.refreshCarCustom();
@@ -381,6 +382,9 @@ export class Scene3D {
   private player: THREE.Group | null = null;
   private wing: THREE.Object3D | undefined;
   private steeringWheel: THREE.Object3D | null = null;
+  /** Revuelto driver cluster: its canvas is redrawn with live speed/gear in the cockpit view. */
+  private clusterScreen: THREE.Mesh | null = null;
+  private clusterClock = 0;
   private cabinOnly: THREE.Object3D[] = [];
   private eyeVector = new THREE.Vector3();
   private lookVector = new THREE.Vector3();
@@ -1156,6 +1160,7 @@ export class Scene3D {
 
     this.player = car;
     this.steeringWheel = car.getObjectByName("steering-wheel") ?? null;
+    this.clusterScreen = (car.getObjectByName("revuelto-cluster-screen") as THREE.Mesh | undefined) ?? null;
     this.wing = car.getObjectByName("active-wing");
     this.wingBaseY = 0.96; this.wingRise = 0.17;
     this.scene.add(car);
@@ -1551,6 +1556,13 @@ export class Scene3D {
         // Right steer turns the rim clockwise as the driver sees it.
         const axis = this.steeringWheel.userData["axis"] as THREE.Vector3;
         this.steeringWheel.quaternion.setFromAxisAngle(axis, -steeringWheelAngle(s.steer ?? 0));
+      }
+      if (this.clusterScreen && this.camView === "cockpit") {
+        this.clusterClock += dt;
+        if (this.clusterClock > 0.1) {
+          this.clusterClock = 0;
+          updateRevueltoCluster(this.clusterScreen, s.player.speed, s.gear);
+        }
       }
       if (import.meta.env.DEV && this.playerWheels.length) {
         this.canvas.dataset["wheelRot"] = this.playerWheels[0]!.mesh.rotation.x.toFixed(3);

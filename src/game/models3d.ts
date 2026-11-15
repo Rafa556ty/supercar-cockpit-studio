@@ -7,6 +7,8 @@ import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { normalizeCar } from "./normalize-car";
 import { isolateActiveWing } from "./active-wing";
 import { blackOutBmwWindow } from "./bmw-windows";
+import { clearChironSsGlass, makeGlassClear } from "./glass";
+import { buildRevueltoCabin, stripRevueltoInterior } from "./revuelto-cabin";
 import { fixSvj } from "./svj-fix";
 import { poseWheelCorners, wheelAxle } from "./wheel-corners";
 import { COCKPIT_SEATS, isSteeringPart } from "./cockpit";
@@ -311,8 +313,12 @@ export function paintRevuelto(root: THREE.Object3D) {
         std.emissiveMap = null;
         std.emissiveIntensity = 0.6;
         std.needsUpdate = true;
-      } else if (n.includes("glass") || n.includes("window") || n.includes("windshield")) {
-        // Deep smoked supercar privacy glass matching reference garage viewer
+      } else if (n.includes("window") || n.includes("windshield")) {
+        // Windscreen and side glass: clear, so the cockpit view sees the road
+        // (the old metallic smoked tint mirrored the sky into a white haze).
+        makeGlassClear(mat);
+      } else if (n.includes("glass")) {
+        // Smoked lamp lenses
         std.color.setHex(0x0a1218);
         std.metalness = 0.92;
         std.roughness = 0.08;
@@ -781,6 +787,7 @@ export function loadCar(key: ModelKey): Promise<THREE.Group> {
       .then((scene) => {
         if (key === "revuelto") paintRevuelto(scene);
         if (key === "chiron") blackenChironRims(scene);
+        if (key === "chiron-ss300") clearChironSsGlass(scene);
         if (TRAFFIC_KEYS.has(key)) styleTraffic(scene, key as TrafficModelKey);
         if (key === "bmw") paintBmw(scene);
         if (key === "mustang") {
@@ -831,6 +838,8 @@ export function loadCar(key: ModelKey): Promise<THREE.Group> {
         if (key === "chiron-ss300") dropGroundPlane(scene);
         const normalized = normalizeCar(scene, spec);
         if (key === "svj") fixSvj(normalized);
+        // Revuelto: cut the GLB's low-poly cabin out; a real 3D cabin replaces it below.
+        const revueltoAccent = key === "revuelto" ? stripRevueltoInterior(normalized) : undefined;
         const result = batchCar(
           normalized,
           key === "revuelto"
@@ -840,7 +849,10 @@ export function loadCar(key: ModelKey): Promise<THREE.Group> {
               : undefined,
           (o) => isSteeringPart(key, `${o.name}|${o.parent?.name ?? ""}`, (o.material as THREE.Material).name || ""),
         );
-        if (key === "revuelto") isolateActiveWing(result);
+        if (key === "revuelto") {
+          isolateActiveWing(result);
+          buildRevueltoCabin(result, revueltoAccent);
+        }
         cutBakedSteeringWheel(result, key);
         // The SVJ file ships its front wheels pre-steered; multi-part wheels share one hub.
         if (SHARED_HUB_KEYS.has(key)) poseWheelCorners(result, { straighten: key === "svj" });

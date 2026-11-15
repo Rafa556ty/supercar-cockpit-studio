@@ -13,7 +13,8 @@ export type CockpitSeat = {
 // Tuned from in-cabin renders. Left out: SVJ and Demon (no usable cabin in
 // the file).
 export const COCKPIT_SEATS: Partial<Record<PlayerCar, CockpitSeat>> = {
-  revuelto: { eye: [-0.26, 0.98, 0.12] },
+  // Matches the rebuilt 3D cabin (revuelto-cabin.ts REVUELTO_EYE).
+  revuelto: { eye: [-0.37, 0.975, 0.1] },
   "huracan-evo": { eye: [-0.36, 0.98, 0.1] },
   laferrari: { eye: [-0.33, 0.96, 0.1] },
   chiron: { eye: [-0.38, 1.02, 0.1] },
