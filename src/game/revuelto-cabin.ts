@@ -100,9 +100,9 @@ function makeMaterials(accent: THREE.Material | undefined) {
     alcantara: std({ color: 0x1d1e21, map: suedeTexture(), roughness: 0.97, metalness: 0 }, "rev_alcantara"),
     leather: std({ color: 0x141517, roughness: 0.55, metalness: 0.02 }, "rev_leather"),
     quilt: std({ color: 0x222326, map: hexTexture(), roughness: 0.75, metalness: 0.02 }, "rev_quilt"),
-    carbon: std({ color: 0x3a3d42, map: carbonTexture(), roughness: 0.26, metalness: 0.4, side: THREE.DoubleSide }, "rev_carbon"),
+    carbon: std({ color: 0x2c2e32, map: carbonTexture(), roughness: 0.26, metalness: 0.4, side: THREE.DoubleSide }, "rev_carbon"),
     gloss: std({ color: 0x050506, roughness: 0.1, metalness: 0.3 }, "rev_gloss"),
-    satin: std({ color: 0x9aa0a7, roughness: 0.32, metalness: 0.9 }, "rev_satin"),
+    satin: std({ color: 0x737980, roughness: 0.35, metalness: 0.9 }, "rev_satin"),
     red: std({ color: 0xc4101f, roughness: 0.32, metalness: 0.15 }, "rev_red"),
     carpet: std({ color: 0x0e0f10, roughness: 1, metalness: 0 }, "rev_carpet"),
     mirror: std({ color: 0xb8c2cc, roughness: 0.04, metalness: 1 }, "rev_mirror"),
@@ -131,9 +131,9 @@ function carbonTexture() {
       for (let x = 0; x < 8; x++) {
         const along = ((x + y) >> 1) % 2 === 0;
         const grad = along ? g.createLinearGradient(x * cell, 0, (x + 1) * cell, 0) : g.createLinearGradient(0, y * cell, 0, (y + 1) * cell);
-        grad.addColorStop(0, "#3a3a3a");
-        grad.addColorStop(0.5, "#cfcfcf");
-        grad.addColorStop(1, "#3a3a3a");
+        grad.addColorStop(0, "#2e2e2e");
+        grad.addColorStop(0.5, "#8c8c8c");
+        grad.addColorStop(1, "#2e2e2e");
         g.fillStyle = grad;
         g.fillRect(x * cell, y * cell, cell, cell);
       }
@@ -634,16 +634,17 @@ export function buildRevueltoCabin(car: THREE.Group, accent?: THREE.Material) {
   // --- doors: Alcantara cards with a carbon "Y" insert and orange armrest
   for (const s of [-1, 1]) {
     const x = s * 0.8;
-    kit.add(sideProfile([[-0.72, 0.92], [0.55, 0.95], [0.62, 0.3], [-0.62, 0.3], [-0.72, 0.5]], x - 0.02, x + 0.02), m.alcantara, place(V()));
+    // Window line kept low (about 13 cm under the eyes) so the side view stays open.
+    kit.add(sideProfile([[-0.7, 0.835], [0.55, 0.86], [0.62, 0.3], [-0.62, 0.3], [-0.7, 0.5]], x - 0.02, x + 0.02), m.alcantara, place(V()));
     const face = x - s * 0.022;
     kit.add(new THREE.BoxGeometry(0.06, 0.035, 0.55), m.accent, place(V(face - s * 0.02, 0.58, 0.02)));
     kit.add(new THREE.BoxGeometry(0.01, 0.17, 0.5), m.quilt, place(V(face, 0.42, 0.05)));
-    for (const [a, b] of [[[0.38, 0.75], [0.0, 0.75]], [[0.0, 0.75], [-0.38, 0.85]], [[0.0, 0.75], [-0.38, 0.66]]] as [[number, number], [number, number]][]) {
+    for (const [a, b] of [[[0.38, 0.72], [0.0, 0.72]], [[0.0, 0.72], [-0.38, 0.79]], [[0.0, 0.72], [-0.38, 0.65]]] as [[number, number], [number, number]][]) {
       const { geo, m: bm } = beam(V(face, a[1], a[0]), V(face, b[1], b[0]), 0.03, 0.01, V(0, 1, 0));
       kit.add(geo, m.carbon, bm);
     }
     kit.add(new THREE.BoxGeometry(0.02, 0.025, 0.12), m.satin, place(V(face - s * 0.01, 0.68, -0.22)));
-    kit.add(new THREE.BoxGeometry(0.05, 0.015, 1.25), m.carbon, place(V(x - s * 0.01, 0.935, -0.08)));
+    kit.add(new THREE.BoxGeometry(0.05, 0.015, 1.25), m.carbon, place(V(x - s * 0.01, 0.85, -0.08), E(0.02)));
   }
 
   // --- hex-quilted bucket seats with orange bolster piping
@@ -692,14 +693,17 @@ export function buildRevueltoCabin(car: THREE.Group, accent?: THREE.Material) {
   passenger.applyMatrix4(pass);
   cabin.add(passenger);
 
-  cabin.traverse((o) => {
-    if ((o as THREE.Mesh).isMesh) {
-      o.castShadow = false;
-      o.receiveShadow = false;
-    }
-  });
+  // The roof and pillars shade the cabin (no shadow is cast by cabin parts).
+  const wheel = buildWheel(m);
+  for (const g of [cabin, wheel])
+    g.traverse((o) => {
+      if ((o as THREE.Mesh).isMesh) {
+        o.castShadow = false;
+        o.receiveShadow = !((o as THREE.Mesh).material instanceof THREE.MeshBasicMaterial);
+      }
+    });
   car.add(cabin);
-  car.add(buildWheel(m));
+  car.add(wheel);
 }
 
 /** Redraw the live cluster (throttled by the caller). */
