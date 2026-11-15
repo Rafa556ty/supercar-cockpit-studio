@@ -166,7 +166,7 @@ function hexTexture() {
       for (let col = -1; col < 6; col++) {
         const cx = col * r * 3 + (row % 2 ? r * 1.5 : 0);
         const cy = row * h * 0.5 * 2;
-        for (const [ox, oy] of [[0, 0], [s, 0], [0, s], [s, s]]) {
+        for (const [ox, oy] of [[0, 0], [s, 0], [0, s], [s, s]] as [number, number][]) {
           g.beginPath();
           for (let i = 0; i < 6; i++) {
             const a = (i / 6) * Math.PI * 2;
