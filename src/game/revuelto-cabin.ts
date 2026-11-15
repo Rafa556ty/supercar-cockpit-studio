@@ -365,9 +365,9 @@ function buildWheel(m: Mats): THREE.Group {
 function addColumn(kit: Kit, m: Mats) {
   const col = place(V(REVUELTO_WHEEL.x, REVUELTO_WHEEL.y, REVUELTO_WHEEL.z), E(-REVUELTO_WHEEL.tilt));
   kit.add(new THREE.CylinderGeometry(0.04, 0.055, 0.22, 16), m.alcantara, inFrame(col, V(0, 0, -0.13), E(Math.PI / 2)));
-  const paddle = poly([[0.02, 0.045], [0.19, 0.085], [0.205, 0.058], [0.06, -0.012], [0.02, -0.012]]);
+  const paddle = poly([[0.02, 0.045], [0.168, 0.078], [0.18, 0.054], [0.06, -0.012], [0.02, -0.012]]);
   for (const side of [-1, 1]) {
-    kit.add(extrude(paddle, 0.006, 0.002), m.carbon, col.clone().multiply(place(V(0, 0, -0.045), E(), V(side, 1, 1))));
+    kit.add(extrude(paddle, 0.006, 0.002), m.gloss, col.clone().multiply(place(V(0, 0, -0.045), E(), V(side, 1, 1))));
   }
 }
 
