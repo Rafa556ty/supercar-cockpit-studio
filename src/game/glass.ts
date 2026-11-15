@@ -40,3 +40,26 @@ export function clearChironSsGlass(root: THREE.Object3D) {
     }
   });
 }
+
+/**
+ * Mustang RTR / BMW M2 files: windows are two stacked shells (outer "Window" and
+ * "WindowInside") sharing one tinted material. Drop the inner window shell
+ * (lamp lenses on the same node stay) and make the outer glass clear.
+ */
+export const TNR_WINDOW = /Window_Material1$/;
+export function clearTnrGlass(root: THREE.Object3D) {
+  const inner: THREE.Object3D[] = [];
+  root.traverse((o) => {
+    const m = o as THREE.Mesh;
+    if (!m.isMesh || Array.isArray(m.material)) return;
+    if (/WindowInside/i.test(`${o.name}|${o.parent?.name ?? ""}`) && TNR_WINDOW.test(m.material.name)) inner.push(o);
+  });
+  for (const o of inner) o.removeFromParent();
+  root.traverse((o) => {
+    const m = o as THREE.Mesh;
+    if (!m.isMesh) return;
+    for (const mat of Array.isArray(m.material) ? m.material : [m.material]) {
+      if (mat && TNR_WINDOW.test(mat.name)) makeGlassClear(mat);
+    }
+  });
+}

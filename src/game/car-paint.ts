@@ -19,6 +19,8 @@ export const PART_MATERIALS: Record<PlayerCar, Record<CarPart, RegExp>> = {
     rims: /^ChironMI_Rim1$/,
     calipers: /^Chironcaliper_B$/,
   },
+  "mustang-rtr": { body: /2019Paint_Material1$/, seats: /^int_Color_1$/, rims: /Wheel1A_3D_3DWheel4A_Material1$/, calipers: /CallipersCalliperGloss/ },
+  m2: { body: /PaintTNR_Material_008$/, seats: /InteriorA_Material1$/, rims: /^RIM_Col$/, calipers: /CallipersCalliperGloss/ },
   "huracan-evo": { body: /PaintTNR_Material1$/, seats: /InteriorA_Material1$|^Interior_C1$/, rims: /TNR_Rim127A/, calipers: /CallipersCalliperGloss/ },
   tourbillon: { body: /2026Paint_Material1$/, seats: /2026InteriorColourZoneA/, rims: /3DWheel1A_Material1$/, calipers: /CalliperA_Zone/ },
   "utopia-roadster": { body: /2024Paint_Material1$/, seats: /InteriorColourZoneA/, rims: /3DWheel2A_Material1$/, calipers: /CalliperA_Zone|^utopiared_galiper$/ },

@@ -15,6 +15,8 @@ export const PLAYER_RECORDINGS: Partial<Record<PlayerCar, string>> = {
   huayra: huayra.url,
   "utopia-roadster": huayra.url,
   demon: challenger.url,
+  // Supercharged 5.0 V8: closest free recording is the Challenger V8.
+  "mustang-rtr": challenger.url,
   // Closest free recordings: La Voiture Noire shares the Chiron W16; Jesko gets the twin-turbo V8 of the SF90.
   "voiture-noire": bugatti.url,
   jesko: ferrari.url,

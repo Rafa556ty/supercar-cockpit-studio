@@ -7,7 +7,7 @@ import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { normalizeCar } from "./normalize-car";
 import { isolateActiveWing } from "./active-wing";
 import { blackOutBmwWindow } from "./bmw-windows";
-import { clearChironSsGlass, makeGlassClear } from "./glass";
+import { clearChironSsGlass, clearTnrGlass, makeGlassClear } from "./glass";
 import { buildRevueltoCabin, stripRevueltoInterior } from "./revuelto-cabin";
 import { fixSvj } from "./svj-fix";
 import { poseWheelCorners, wheelAxle } from "./wheel-corners";
@@ -33,6 +33,9 @@ import demonAsset from "@/assets/models/dodge_challenger_srt_demon_sdc.glb.asset
 import m4Asset from "@/assets/models/2025_bmw_m4_competition.glb.asset.json";
 import jeskoAsset from "@/assets/models/2019_koenigsegg_jesko.glb.asset.json";
 import voitureNoireAsset from "@/assets/models/2019_bugatti_la_voiture_noire.glb.asset.json";
+import mustangRtrAsset from "@/assets/models/mustang_rtr_spec5.glb.asset.json";
+import m2Asset from "@/assets/models/bmw_m2_g87.glb.asset.json";
+import policeAventadorAsset from "@/assets/models/police_aventador.glb.asset.json";
 
 export type TrafficModelKey = "hatch" | "sedan" | "suv" | "pickup" | "bus" | "truck";
 export type ModelKey =
@@ -49,6 +52,9 @@ export type ModelKey =
   | "m4-competition"
   | "jesko"
   | "voiture-noire"
+  | "mustang-rtr"
+  | "m2"
+  | "police-aventador"
   | "mustang"
   | "bmw"
   | "porsche"
@@ -80,6 +86,11 @@ export const MODEL_SPECS: Record<ModelKey, ModelSpec> = {
   "m4-competition": { url: m4Asset.url, length: 4.794, yaw: Math.PI },
   jesko: { url: jeskoAsset.url, length: 4.61, yaw: Math.PI },
   "voiture-noire": { url: voitureNoireAsset.url, length: 4.544, yaw: Math.PI },
+  // Owner-supplied (meshopt + 1024 px WebP); nose found from the red rear lenses.
+  "mustang-rtr": { url: mustangRtrAsset.url, length: 4.79, yaw: 0 },
+  m2: { url: m2Asset.url, length: 4.58, yaw: 0 },
+  // Police pursuit car: Aventador LP 700-4 patrol (512 px textures, drawn once).
+  "police-aventador": { url: policeAventadorAsset.url, length: 4.78, yaw: 0 },
   mustang: { url: mustangAsset.url, length: 4.8, yaw: 0 },
   bmw: { url: bmwAsset.url, length: 4.8, yaw: 0 },
   // User-supplied models, simplified + meshopt for traffic; both noses point +Z.
@@ -403,9 +414,9 @@ function paintBmw(root: THREE.Object3D) {
 }
 
 /** Newer playable cars: wheels found by material name so they can spin and steer. */
-const NEW_CAR_KEYS = new Set<ModelKey>(["huracan-evo", "tourbillon", "utopia-roadster", "huayra", "demon", "chiron-ss300", "laferrari", "svj", "m4-competition", "jesko", "voiture-noire"]);
+const NEW_CAR_KEYS = new Set<ModelKey>(["huracan-evo", "tourbillon", "utopia-roadster", "huayra", "demon", "chiron-ss300", "laferrari", "svj", "m4-competition", "jesko", "voiture-noire", "mustang-rtr", "m2"]);
 /** Cars whose wheel parts are re-pivoted on one hub per corner (see wheel-corners.ts). */
-const SHARED_HUB_KEYS = new Set<ModelKey>(["svj", "m4-competition", "jesko", "voiture-noire"]);
+const SHARED_HUB_KEYS = new Set<ModelKey>(["svj", "m4-competition", "jesko", "voiture-noire", "m2"]);
 export const NEW_CAR_WHEEL = /wheel|tire|tyre|rim|brakedis|brake\.|rotor|^ext_disc$|1004bodyunrefunblend1063/i;
 const isNewCarWheel = (o: THREE.Mesh) => {
   const n = (o.material as THREE.Material).name;
@@ -788,6 +799,7 @@ export function loadCar(key: ModelKey): Promise<THREE.Group> {
         if (key === "revuelto") paintRevuelto(scene);
         if (key === "chiron") blackenChironRims(scene);
         if (key === "chiron-ss300") clearChironSsGlass(scene);
+        if (key === "mustang-rtr" || key === "m2") clearTnrGlass(scene);
         if (TRAFFIC_KEYS.has(key)) styleTraffic(scene, key as TrafficModelKey);
         if (key === "bmw") paintBmw(scene);
         if (key === "mustang") {
