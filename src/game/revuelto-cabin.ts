@@ -390,6 +390,9 @@ function addHexVent(kit: Kit, m: Mats, frame: THREE.Matrix4, r: number) {
 }
 
 function screen(w: number, h: number, tex: THREE.Texture, name: string) {
+  // Screens are small on screen: no mip chain, so text never blurs into a flat grey.
+  tex.generateMipmaps = false;
+  tex.minFilter = THREE.LinearFilter;
   const mat = new THREE.MeshBasicMaterial({ map: tex, toneMapped: false });
   mat.name = name;
   return new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
