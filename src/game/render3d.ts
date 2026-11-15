@@ -906,17 +906,20 @@ export class Scene3D {
       "bugatti",
       "ferrari",
     ];
-    await Promise.all(
+    // Police pursuit car: the owner's Lamborghini Aventador patrol model.
+    const police = loadCar("police-aventador")
+      .then((t) => this.setupPoliceAventador(t.clone(true)))
+      .catch((e) => console.error("police model failed", e));
+    await Promise.all([police, ...
       keys.map((k) =>
         loadCar(k)
           .then((t) => {
             this.templates.set(k, t);
             this.setupTrafficBatch(k, t);
-            if (k === "mustang") this.setupPolice(t.clone(true));
           })
           .catch((e) => console.error(`model ${k} failed`, e)),
       ),
-    );
+    ]);
     await this.precompileAll();
     this.canvas.dataset["modelsReady"] = "true";
   }
@@ -1314,6 +1317,56 @@ export class Scene3D {
   private unitScale = new THREE.Vector3(1, 1, 1);
 
   /** Mustang GT interceptor: black-and-white livery, light bar, POLÍCIA doors. */
+  /**
+   * Aventador patrol: keeps its own livery; the roof/grille strobes (CP_Light)
+   * are split at the car's centre line into a red (driver side) and a blue half
+   * that render() flashes.
+   */
+  private setupPoliceAventador(car: THREE.Group) {
+    this.policeRed = new THREE.MeshStandardMaterial({ color: 0x330000, emissive: 0xff1010, emissiveIntensity: 0, toneMapped: false });
+    this.policeBlue = new THREE.MeshStandardMaterial({ color: 0x000833, emissive: 0x1a4dff, emissiveIntensity: 0, toneMapped: false });
+    car.updateMatrixWorld(true);
+    const inv = new THREE.Matrix4().copy(car.matrixWorld).invert();
+    const strobes: THREE.Mesh[] = [];
+    car.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (m.isMesh && !Array.isArray(m.material) && m.material.name === "CP_Light") strobes.push(m);
+    });
+    const v = new THREE.Vector3();
+    for (const mesh of strobes) {
+      const toCar = new THREE.Matrix4().multiplyMatrices(inv, mesh.matrixWorld);
+      const geo = mesh.geometry;
+      const pos = geo.getAttribute("position");
+      const index = geo.getIndex();
+      const tri = (index ? index.count : pos.count) / 3;
+      const vi = (t: number, k: number) => (index ? index.getX(t * 3 + k) : t * 3 + k);
+      const left: number[] = [], right: number[] = [];
+      for (let t = 0; t < tri; t++) {
+        let x = 0;
+        for (let k = 0; k < 3; k++) x += v.fromBufferAttribute(pos, vi(t, k)).applyMatrix4(toCar).x;
+        (x < 0 ? left : right).push(vi(t, 0), vi(t, 1), vi(t, 2));
+      }
+      const parent = mesh.parent ?? car;
+      for (const [list, mat] of [[left, this.policeRed], [right, this.policeBlue]] as const) {
+        if (!list.length) continue;
+        const g = geo.clone();
+        g.setIndex(list);
+        const piece = new THREE.Mesh(g, mat);
+        piece.position.copy(mesh.position); piece.quaternion.copy(mesh.quaternion); piece.scale.copy(mesh.scale);
+        parent.add(piece);
+      }
+      parent.remove(mesh);
+    }
+    car.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (m.isMesh) for (const mat of Array.isArray(m.material) ? m.material : [m.material]) mat.forceSinglePass = true;
+    });
+    this.addContactShadow(car, 2.15, 4.9);
+    car.visible = false;
+    this.scene.add(car);
+    this.policeCar = car;
+  }
+
   private setupPolice(car: THREE.Group) {
     car.updateMatrixWorld(true);
     const size = new THREE.Vector3();
