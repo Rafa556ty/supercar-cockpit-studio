@@ -12,10 +12,14 @@ import {
   nextSportMood,
   SPORT_PUSH,
 } from "./traffic-rules";
-import { pickGear } from "./gearbox";
+import { pickGear, rpmIn } from "./gearbox";
+import { CAR_PERF, POLICE_ACCEL_RATIO, POLICE_TOP_RATIO, accelFor } from "./car-performance";
+import type { PlayerCar } from "./player-cars";
 import {
   ESCAPE_GAP,
   POLICE_MAX,
+  POLICE_ACCEL,
+  chasePrize,
   START_DELAY,
   START_GAP,
   escapeProgress,
@@ -72,6 +76,10 @@ export type HudData = {
   policeGap?: number | undefined;
   policeZone?: Zone | undefined;
   escapeProgress?: number | undefined;
+  /** Police Escape: dollars won if the player escapes now. */
+  prize?: number | undefined;
+  /** Engine rpm for the cluster (gears follow the car's own top speed). */
+  rpm?: number | undefined;
 };
 
 export type GameOverOutcome = "crash" | "busted" | "escaped";
@@ -321,7 +329,7 @@ export class RacingEngine {
     private images: CarAssetMap,
     private cb: {
       onHud: (h: HudData) => void;
-      onGameOver: (r: { distance: number; topSpeed: number; outcome: GameOverOutcome }) => void;
+      onGameOver: (r: { distance: number; topSpeed: number; outcome: GameOverOutcome; prize: number }) => void;
       onNearMiss?: (combo: number, pts: number) => void;
       onRadarTrigger?: (speed: number) => void;
       onShift?: (gear: number) => void;
@@ -386,6 +394,23 @@ export class RacingEngine {
   setMode(mode: "free" | "police") {
     this.mode = mode;
   }
+
+  /** Player car performance: real top speed and 0–100 time; police pace follows it. */
+  private topKmh = MAX_SPEED;
+  private accel = ACCEL;
+  private policeMax = POLICE_MAX;
+  private policeAccel = POLICE_ACCEL;
+  setCar(car: PlayerCar) {
+    const perf = CAR_PERF[car];
+    this.topKmh = perf.top;
+    this.accel = accelFor(perf);
+    this.policeMax = Math.round(perf.top * POLICE_TOP_RATIO);
+    this.policeAccel = this.accel * POLICE_ACCEL_RATIO;
+  }
+  get playerTopSpeed() { return this.topKmh; }
+  /** Speed on the reference gearbox: every car uses all 8 gears up to its own top speed. */
+  private gearSpeed(speed: number) { return (speed * MAX_SPEED) / this.topKmh; }
+  private prizeNow() { return this.mode === "police" ? chasePrize(this.distance) : 0; }
 
   resize(w: number, h: number) {
     if (w < 20 || h < 20) return;
@@ -593,8 +618,8 @@ export class RacingEngine {
           this.boostActive = true;
           this.boostEnergy = Math.max(0, this.boostEnergy - 28 * dt);
           this.audio?.setBoost(true);
-          const boostForce = 85 * (1 - (p.speed / (MAX_SPEED + 12)) ** 1.3);
-          a = ACCEL * (1 - (p.speed / MAX_SPEED) ** 2) + boostForce + 6.0;
+          const boostForce = 85 * (this.accel / ACCEL) * Math.max(0, 1 - (p.speed / (this.topKmh + 12)) ** 1.3);
+          a = this.accel * (1 - (p.speed / this.topKmh) ** 2) + boostForce + 6.0;
           this.exhaustFlameTimer = 0.22;
           this.shake = Math.max(this.shake, 1.25);
         } else {
@@ -602,16 +627,16 @@ export class RacingEngine {
           this.audio?.setBoost(false);
           this.boostEnergy = Math.min(100, this.boostEnergy + 5.5 * dt);
           if (inp.gas) {
-            a = ACCEL * (1 - (p.speed / MAX_SPEED) ** 2) + 3.5;
+            a = this.accel * (1 - (p.speed / this.topKmh) ** 2) + 3.5;
           } else {
             a = -(COAST + p.speed * 0.04);
           }
         }
       }
-      p.speed = clamp(p.speed + a * dt, 0, MAX_SPEED);
+      p.speed = clamp(p.speed + a * dt, 0, this.topKmh);
 
       // Gearbox computation (8-speed, 1-indexed)
-      const g0 = pickGear(this.currentGear - 1, p.speed, inp.gas || this.boostActive);
+      const g0 = pickGear(this.currentGear - 1, this.gearSpeed(p.speed), inp.gas || this.boostActive);
       const newGear = g0 + 1;
       if (newGear > this.currentGear && (inp.gas || this.boostActive)) {
         // Requirement 1: Flame appears on shift into even gears (2, 4, 6, 8)
@@ -681,7 +706,7 @@ export class RacingEngine {
       if (p.speed <= 0.5 && this.crashT > 0.5) {
         this.phase = "over";
         this.gameOverOutcome = "busted";
-        this.cb.onGameOver({ distance: this.distance, topSpeed: this.topSpeed, outcome: "busted" });
+        this.cb.onGameOver({ distance: this.distance, topSpeed: this.topSpeed, outcome: "busted", prize: 0 });
       }
     } else {
       // Crashed / Escaped ending dynamics: realistic tire skid on asphalt, zero barrel-roll
@@ -711,7 +736,7 @@ export class RacingEngine {
         const out = this.phase === "crashed" ? "crash" : "escaped";
         this.phase = "over";
         this.gameOverOutcome = out;
-        this.cb.onGameOver({ distance: this.distance, topSpeed: this.topSpeed, outcome: out });
+        this.cb.onGameOver({ distance: this.distance, topSpeed: this.topSpeed, outcome: out, prize: out === "escaped" ? this.prizeNow() : 0 });
       }
     }
 
@@ -880,7 +905,7 @@ export class RacingEngine {
 
     this.audio?.setTraffic(this.traffic, this.pz, p.x, this.k, playing);
     this.audio?.setEngine(
-      playing ? p.speed : 0,
+      playing ? this.gearSpeed(p.speed) : 0,
       (inp.gas || this.boostActive) && playing,
       playing,
       tunnel,
@@ -909,6 +934,8 @@ export class RacingEngine {
         policeGap: this.mode === "police" ? gap : undefined,
         policeZone: this.mode === "police" ? policeZone(gap) : undefined,
         escapeProgress: this.mode === "police" ? escapeProgress(gap) : undefined,
+        prize: this.mode === "police" ? this.prizeNow() : undefined,
+        rpm: rpmIn(this.currentGear - 1, this.gearSpeed(p.speed)),
       });
     }
   }
@@ -969,7 +996,7 @@ export class RacingEngine {
       }
 
       // Respect traffic: never faster than a car right ahead in the lanes it occupies
-      let speedCap = POLICE_MAX;
+      let speedCap = this.policeMax;
       for (const t of this.traffic) {
         if (t.hit) continue;
         const dz = t.z - pol.z;
@@ -1031,7 +1058,7 @@ export class RacingEngine {
           if (Math.abs(pol.x - this.player.x) > this.carW * 0.75) pol.holdT = 0;
           if (gapNow > this.lenM * 6) pol.blocking = false; // player got away
         } else {
-          pol.speed = policeSpeedStep(pol.speed, dt, speedCap);
+          pol.speed = policeSpeedStep(pol.speed, dt, speedCap, this.policeMax, this.policeAccel);
         }
       }
       pol.z += (pol.speed / 3.6) * dt;

@@ -13,6 +13,8 @@ export type LampSpec = {
 };
 
 export const PLAYER_LAMPS: Partial<Record<PlayerCar, LampSpec>> = {
+  "mustang-rtr": { lamp: /LightB_Material1$/, tail: /^red_glass$/ },
+  m2: { lamp: /LightD_Material1$/, tail: /^red_glass$/ },
   laferrari: { lamp: /^uv1MAT_Light1$|^glass_lishgt$/, tail: /^red_glass$/ },
   "huracan-evo": { lamp: /LightA_Material1$|^glass_light$|^emiss$/, tail: /^red_glass$/ },
   tourbillon: { lamp: /LightA_Material1$/, tail: /^red_glass$/ },
@@ -37,7 +39,7 @@ export function lampRole(car: PlayerCar, material: string): LampRole | null {
 }
 
 /** Cars whose lamps are fully dark by day / outside tunnels (no DRL glow). */
-export const DARK_BY_DAY = new Set<PlayerCar>(["svj"]);
+export const DARK_BY_DAY = new Set<PlayerCar>(["svj", "mustang-rtr", "m2"]);
 
 /** Emissive levels: automatic on in tunnels / at night, daytime keeps a dim DRL unless `darkByDay`. */
 export function lampLevels(lightsOn: boolean, braking: boolean, darkByDay = false) {

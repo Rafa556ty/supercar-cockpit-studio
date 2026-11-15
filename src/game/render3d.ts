@@ -906,17 +906,20 @@ export class Scene3D {
       "bugatti",
       "ferrari",
     ];
-    await Promise.all(
+    // Police pursuit car: the owner's Lamborghini Aventador patrol model.
+    const police = loadCar("police-aventador")
+      .then((t) => this.setupPoliceAventador(t.clone(true)))
+      .catch((e) => console.error("police model failed", e));
+    await Promise.all([police, ...
       keys.map((k) =>
         loadCar(k)
           .then((t) => {
             this.templates.set(k, t);
             this.setupTrafficBatch(k, t);
-            if (k === "mustang") this.setupPolice(t.clone(true));
           })
           .catch((e) => console.error(`model ${k} failed`, e)),
       ),
-    );
+    ]);
     await this.precompileAll();
     this.canvas.dataset["modelsReady"] = "true";
   }
@@ -1314,80 +1317,50 @@ export class Scene3D {
   private unitScale = new THREE.Vector3(1, 1, 1);
 
   /** Mustang GT interceptor: black-and-white livery, light bar, POLÍCIA doors. */
-  private setupPolice(car: THREE.Group) {
+  /**
+   * Aventador patrol: keeps its own livery; the roof/grille strobes (CP_Light)
+   * are split at the car's centre line into a red (driver side) and a blue half
+   * that render() flashes.
+   */
+  private setupPoliceAventador(car: THREE.Group) {
+    this.policeRed = new THREE.MeshStandardMaterial({ color: 0x330000, emissive: 0xff1010, emissiveIntensity: 0, toneMapped: false });
+    this.policeBlue = new THREE.MeshStandardMaterial({ color: 0x000833, emissive: 0x1a4dff, emissiveIntensity: 0, toneMapped: false });
     car.updateMatrixWorld(true);
-    const size = new THREE.Vector3();
+    const inv = new THREE.Matrix4().copy(car.matrixWorld).invert();
+    const strobes: THREE.Mesh[] = [];
     car.traverse((o) => {
       const m = o as THREE.Mesh;
-      if (!m.isMesh) return;
-      // Body shell = the big panels that span the car; repaint them gloss black.
-      new THREE.Box3().setFromObject(m).getSize(size);
-      const isShell = size.x > 1.5 && size.z > 3;
-      const swap = (mat: THREE.Material) => {
-        const n = mat.name.toLowerCase();
-        if (!(n === "body" || n.startsWith("palette") || (isShell && n.startsWith("fordm_grille")))) return mat;
-        const c = (mat as THREE.MeshStandardMaterial).clone();
-        c.map = null;
-        c.color.set(0x08090b);
-        c.metalness = 0.75;
-        c.roughness = 0.2;
-        return c;
-      };
-      m.material = Array.isArray(m.material) ? m.material.map(swap) : swap(m.material);
+      if (m.isMesh && !Array.isArray(m.material) && m.material.name === "CP_Light") strobes.push(m);
     });
-    const box = new THREE.Box3().setFromObject(car);
-    const roof = box.max.y;
-    const halfW = (box.max.x - box.min.x) / 2;
-    // Door panels: white with "POLÍCIA" lettering (one canvas texture for both sides)
-    const cv = document.createElement("canvas");
-    cv.width = 512;
-    cv.height = 96;
-    const g = cv.getContext("2d")!;
-    g.fillStyle = "#f2f2f0";
-    g.fillRect(0, 0, 512, 96);
-    g.fillStyle = "#0a2a6b";
-    g.fillRect(0, 74, 512, 10);
-    g.fillStyle = "#101114";
-    g.font = "bold 58px Barlow, Arial, sans-serif";
-    g.textAlign = "center";
-    g.textBaseline = "middle";
-    g.fillText("POLÍCIA", 256, 40);
-    const tex = new THREE.CanvasTexture(cv);
-    tex.colorSpace = THREE.SRGBColorSpace;
-    tex.anisotropy = 4;
-    const doorMat = new THREE.MeshStandardMaterial({ map: tex, metalness: 0.3, roughness: 0.35 });
-    const door = new THREE.PlaneGeometry(2.0, 0.38);
-    for (const side of [-1, 1]) {
-      const d = new THREE.Mesh(door, doorMat);
-      d.position.set(side * (halfW - 0.03), roof * 0.47, 0.05);
-      d.rotation.y = side * (Math.PI / 2);
-      car.add(d);
+    const v = new THREE.Vector3();
+    for (const mesh of strobes) {
+      const toCar = new THREE.Matrix4().multiplyMatrices(inv, mesh.matrixWorld);
+      const geo = mesh.geometry;
+      const pos = geo.getAttribute("position");
+      const index = geo.getIndex();
+      const tri = (index ? index.count : pos.count) / 3;
+      const vi = (t: number, k: number) => (index ? index.getX(t * 3 + k) : t * 3 + k);
+      const left: number[] = [], right: number[] = [];
+      for (let t = 0; t < tri; t++) {
+        let x = 0;
+        for (let k = 0; k < 3; k++) x += v.fromBufferAttribute(pos, vi(t, k)).applyMatrix4(toCar).x;
+        (x < 0 ? left : right).push(vi(t, 0), vi(t, 1), vi(t, 2));
+      }
+      const parent = mesh.parent ?? car;
+      for (const [list, mat] of [[left, this.policeRed], [right, this.policeBlue]] as const) {
+        if (!list.length) continue;
+        const g = geo.clone();
+        g.setIndex(list);
+        const piece = new THREE.Mesh(g, mat);
+        piece.position.copy(mesh.position); piece.quaternion.copy(mesh.quaternion); piece.scale.copy(mesh.scale);
+        parent.add(piece);
+      }
+      parent.remove(mesh);
     }
-    // Light bar: red (driver side) / blue, flashed from render()
-    this.policeRed = new THREE.MeshStandardMaterial({
-      color: 0x330000,
-      emissive: 0xff1010,
-      emissiveIntensity: 0,
-      toneMapped: false,
+    car.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (m.isMesh) for (const mat of Array.isArray(m.material) ? m.material : [m.material]) mat.forceSinglePass = true;
     });
-    this.policeBlue = new THREE.MeshStandardMaterial({
-      color: 0x000833,
-      emissive: 0x1a4dff,
-      emissiveIntensity: 0,
-      toneMapped: false,
-    });
-    const base = new THREE.Mesh(
-      new THREE.BoxGeometry(1.15, 0.07, 0.26),
-      new THREE.MeshStandardMaterial({ color: 0x111214, roughness: 0.5 }),
-    );
-    base.position.set(0, roof + 0.02, 0.15);
-    car.add(base);
-    const lamp = new THREE.BoxGeometry(0.52, 0.09, 0.22);
-    const red = new THREE.Mesh(lamp, this.policeRed);
-    red.position.set(-0.29, roof + 0.09, 0.15);
-    const blue = new THREE.Mesh(lamp, this.policeBlue);
-    blue.position.set(0.29, roof + 0.09, 0.15);
-    car.add(red, blue);
     this.addContactShadow(car, 2.15, 4.9);
     car.visible = false;
     this.scene.add(car);

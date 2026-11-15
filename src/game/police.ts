@@ -25,10 +25,10 @@ export function policeZone(gap: number): Zone {
 export const escapeProgress = (gap: number) => Math.max(0, Math.min(1, gap / ESCAPE_GAP));
 
 /** Police acceleration step (km/h) for one frame, never above POLICE_MAX. */
-export function policeSpeedStep(speed: number, dt: number, cap = Infinity) {
-  const target = Math.min(POLICE_MAX, cap);
+export function policeSpeedStep(speed: number, dt: number, cap = Infinity, max = POLICE_MAX, accel = POLICE_ACCEL) {
+  const target = Math.min(max, cap);
   if (speed > target) return Math.max(target, speed - 150 * dt);
-  const a = POLICE_ACCEL * (1 - (speed / POLICE_MAX) ** 2) + 4;
+  const a = accel * (1 - (speed / max) ** 2) + 4;
   return Math.min(target, speed + a * dt);
 }
 
@@ -74,4 +74,17 @@ export function choosePoliceLane(
     if (policeLaneFree(cars, l, pol.z, o.ahead, o.behind)) return l;
   }
   return pol.lane;
+}
+
+/** Escape prize: every 100 m driven during the chase raises the prize. */
+export const PRIZE_STEP_M = 100;
+/** Dollars the first 100 m are worth. */
+export const PRIZE_BASE = 1000;
+/** Each further 100 m is worth this much more than the previous one. */
+export const PRIZE_RAMP = 100;
+
+/** Dollars won for escaping after driving `distance` metres with the police behind. */
+export function chasePrize(distance: number) {
+  const n = Math.floor(Math.max(0, distance) / PRIZE_STEP_M);
+  return n * PRIZE_BASE + (PRIZE_RAMP * n * (n - 1)) / 2;
 }
