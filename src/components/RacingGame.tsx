@@ -44,7 +44,7 @@ import gameLogo from "@/assets/brand/supercar-highway-dash-logo.webp.asset.json"
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { GarageViewer } from "@/components/GarageViewer";
-import { DEFAULT_GARAGE, claimCar, choosePlayerCar, isOwned, carSpec, loadGarage, saveGarage, type PlayerCar, type GarageState } from "@/game/player-cars";
+import { DEFAULT_GARAGE, STARTER_CAR, buyCar, canAfford, carPrice, choosePlayerCar, devGarage, formatDollars, isDeveloperHost, isOwned, carSpec, loadBalance, loadGarage, saveBalance, saveGarage, type PlayerCar, type GarageState } from "@/game/player-cars";
 import { CarStore } from '@/components/CarStore';
 import { SpeedCluster } from '@/components/SpeedCluster';
 import { TitleScreen } from "@/components/TitleScreen";
@@ -116,11 +116,20 @@ export function RacingGame() {
   const [garageBusy, setGarageBusy] = useState(true);
   const [garageError, setGarageError] = useState("");
   const [confirmClaim, setConfirmClaim] = useState<PlayerCar | null>(null);
-  const selectedCarRef = useRef<PlayerCar>("revuelto");
+  const [balance, setBalance] = useState(0);
+  const [developer, setDeveloper] = useState(false);
+  const [lastPrize, setLastPrize] = useState(0);
+  // Developer (Lovable preview) sees every car as owned; the real garage stays untouched.
+  const ownedGarage = developer ? devGarage(garage) : garage;
+  const selectedCarRef = useRef<PlayerCar>(STARTER_CAR);
   useEffect(() => {
     let cancelled = false;
-    const saved = loadGarage(localStorage);
+    const dev = isDeveloperHost(window.location.hostname);
+    setDeveloper(dev);
+    setBalance(loadBalance(localStorage));
+    const saved = loadGarage(localStorage, dev);
     selectedCarRef.current = saved.selectedCar;
+    engineRef.current?.setCar(saved.selectedCar);
     (async () => {
       await scene3dRef.current?.selectPlayerCar(saved.selectedCar);
       if (cancelled) return;
@@ -138,16 +147,27 @@ export function RacingGame() {
   };
   const selectCar = (car: PlayerCar, confirmed = false) => {
     if (garageBusy) return;
-    if (!isOwned(garage, car) && !confirmed) { preloadCar(car); setConfirmClaim(car); return; }
+    const owned = isOwned(ownedGarage, car);
+    if (!owned && !confirmed) { preloadCar(car); setConfirmClaim(car); return; }
     setGarageError("");
     let saved: GarageState;
     try {
-      saved = confirmed ? claimCar(garage, car, true) : choosePlayerCar(garage, car);
+      if (owned) {
+        // Developer keeps the real owned list; only the selection is saved.
+        saved = { owned: garage.owned, selectedCar: choosePlayerCar(ownedGarage, car).selectedCar };
+      } else {
+        const bought = buyCar(garage, balance, car);
+        if (!bought) { setGarageError("Saldo insuficiente para comprar este carro."); return; }
+        saved = bought.garage;
+        saveBalance(localStorage, bought.balance);
+        setBalance(bought.balance);
+        uiSounds.purchase();
+      }
       saveGarage(localStorage, saved);
     } catch (e) { setGarageError(e instanceof Error ? e.message : "Não foi possível salvar. Tente novamente."); return; }
-    // Claim/selection is saved instantly; the 3D model swaps in when it has loaded.
-    if (confirmed && !isOwned(garage, car) && isOwned(saved, car)) uiSounds.purchase();
+    // Purchase/selection is saved instantly; the 3D model swaps in when it has loaded.
     selectedCarRef.current = saved.selectedCar;
+    engineRef.current?.setCar(saved.selectedCar);
     audioRef.current?.setPlayerCar(saved.selectedCar);
     setGarage(saved); setConfirmClaim(null);
     setCarLoading(true);
@@ -346,7 +366,16 @@ export function RacingGame() {
           carAssets,
           {
             onHud: setHud,
-            onGameOver: ({ distance, topSpeed, outcome }) => {
+            onGameOver: ({ distance, topSpeed, outcome, prize }) => {
+              // Police-escape prize: paid into the wallet only when the player escaped.
+              const won = outcome === "escaped" ? Math.max(0, Math.round(prize)) : 0;
+              setLastPrize(won);
+              if (won > 0) {
+                const next = loadBalance(localStorage) + won;
+                saveBalance(localStorage, next);
+                setBalance(next);
+                uiSounds.purchase();
+              }
               const currentMode = engine.mode;
               const bestKey = currentMode === "police" ? BEST_POLICE_KEY : BEST_FREE_KEY;
               const prev = Number(localStorage.getItem(bestKey) || 0);
@@ -364,6 +393,7 @@ export function RacingGame() {
         );
 
         engineRef.current = engine;
+        engine.setCar(selectedCarRef.current);
         engine.hidden = showTitleRef.current;
         if (import.meta.env.DEV) {
           (window as Window & { __game?: unknown }).__game = {
@@ -1053,6 +1083,10 @@ export function RacingGame() {
                 </Button>
               </div>
 
+              <p className="font-display text-lg tabular-nums tracking-wider text-primary" aria-label="Seu saldo">
+                SALDO: {developer ? "GRÁTIS (DESENVOLVEDOR)" : formatDollars(balance)}
+              </p>
+
               {bestScore > 0 && (
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   {t.record}: {formatKm(bestScore)} km
@@ -1097,6 +1131,12 @@ export function RacingGame() {
                     {t.crashedDesc}
                   </p>
                 </>
+              )}
+
+              {result.outcome === "escaped" && lastPrize > 0 && (
+                <p className="mt-3 font-display text-3xl tabular-nums text-primary" role="status">
+                  +{formatDollars(lastPrize)}
+                </p>
               )}
 
               {result.record && (
@@ -1230,7 +1270,7 @@ export function RacingGame() {
               close: t.close,
             }}
             selectedCar={garage.selectedCar}
-            owned={garage.owned}
+            owned={ownedGarage.owned}
             busy={garageBusy}
             onSelect={car => { selectCar(car); }}
             onClose={() => { setShowGarage(false); scene3dRef.current?.refreshCarCustom(); }}
@@ -1345,18 +1385,24 @@ export function RacingGame() {
         )}
         {garageError && (showGarage || showPoliceOff || confirmClaim) && <div role="alert" className="absolute inset-x-4 top-20 z-[70] border border-brake bg-card p-3 text-center text-sm text-brake">{garageError}</div>}
         {confirmClaim && (
-          <div role="alertdialog" aria-modal="true" aria-label={`Resgatar ${carSpec(confirmClaim).name}`} className="absolute inset-0 z-[60] flex items-center justify-center bg-scrim p-5">
+          <div role="alertdialog" aria-modal="true" aria-label={`Comprar ${carSpec(confirmClaim).name}`} className="absolute inset-0 z-[60] flex items-center justify-center bg-scrim p-5">
             <div className="w-full max-w-sm rounded border border-primary/40 bg-card p-6 text-center">
               <Car className="mx-auto size-9 text-primary" />
-              <h3 className="mt-3 font-display text-3xl">RESGATAR {carSpec(confirmClaim).name.toUpperCase()}?</h3>
-              <p className="mt-3 text-sm text-muted-foreground">Você realmente quer resgatar esse carro gratuitamente? Promoção por tempo limitado.</p>
-              <Button variant="race" disabled={garageBusy} className="mt-5 w-full" onClick={() => { selectCar(confirmClaim, true); }}>SIM, RESGATAR</Button>
+              <h3 className="mt-3 font-display text-3xl">COMPRAR {carSpec(confirmClaim).name.toUpperCase()}?</h3>
+              <p className="mt-3 font-display text-2xl tabular-nums text-primary">{formatDollars(carPrice(confirmClaim))}</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Seu saldo: {formatDollars(balance)}
+                {!canAfford(balance, confirmClaim) && <> · Faltam {formatDollars(carPrice(confirmClaim) - balance)}. Fuja da polícia para ganhar dólares.</>}
+              </p>
+              <Button variant="race" disabled={garageBusy || !canAfford(balance, confirmClaim)} className="mt-5 w-full" onClick={() => { selectCar(confirmClaim, true); }}>
+                {canAfford(balance, confirmClaim) ? "SIM, COMPRAR" : "SALDO INSUFICIENTE"}
+              </Button>
               <Button variant="ghost" disabled={garageBusy} className="mt-2 w-full" onClick={() => setConfirmClaim(null)}>CANCELAR</Button>
             </div>
           </div>
         )}
         {showPoliceOff && (
-          <CarStore garage={garage} busy={garageBusy} onClaim={car => { selectCar(car); }} onClose={() => setShowPoliceOff(false)} />
+          <CarStore garage={garage} balance={balance} developer={developer} busy={garageBusy} onPick={car => { selectCar(car); }} onClose={() => setShowPoliceOff(false)} />
         )}
         {carLoading && !showTitle && (
           <div role="status" className="pointer-events-none absolute bottom-4 left-1/2 z-[75] -translate-x-1/2 border border-hud-border bg-hud px-4 py-2 font-display text-sm tracking-widest text-foreground">
