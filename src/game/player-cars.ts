@@ -63,14 +63,15 @@ export function buyCar(state: GarageState, balance: number, car: PlayerCar): { g
 
 const GARAGE_KEY = "garage-state-v2";
 type KV = Pick<Storage, "getItem" | "setItem">;
-export function loadGarage(store: KV): GarageState {
+/** `anySelectable`: developer mode, where every car may stay selected after reload. */
+export function loadGarage(store: KV, anySelectable = false): GarageState {
   try {
     const raw = JSON.parse(store.getItem(GARAGE_KEY) ?? "null");
     if (!raw || typeof raw !== "object") return DEFAULT_GARAGE;
     const owned = new Set<PlayerCar>([STARTER_CAR]);
     if (Array.isArray(raw.owned)) for (const c of raw.owned) if (isPlayerCar(c)) owned.add(c);
     const list = PLAYABLE_CARS.map(c => c.id).filter(id => owned.has(id));
-    return { owned: list, selectedCar: isPlayerCar(raw.selectedCar) && owned.has(raw.selectedCar) ? raw.selectedCar : STARTER_CAR };
+    return { owned: list, selectedCar: isPlayerCar(raw.selectedCar) && (anySelectable || owned.has(raw.selectedCar)) ? raw.selectedCar : STARTER_CAR };
   } catch { return DEFAULT_GARAGE; }
 }
 export function saveGarage(store: KV, state: GarageState) { store.setItem(GARAGE_KEY, JSON.stringify(state)); }
@@ -90,3 +91,6 @@ export function isDeveloperHost(hostname: string): boolean {
   const h = hostname.toLowerCase();
   return h === 'localhost' || h === '127.0.0.1' || h.startsWith('id-preview--') || h.startsWith('preview--') || h.endsWith('.lovableproject.com');
 }
+
+/** "$25.000" — dollars written with Brazilian thousands separators. */
+export const formatDollars = (n: number) => `$${Math.round(n).toLocaleString('pt-BR')}`;
