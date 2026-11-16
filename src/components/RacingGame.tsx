@@ -699,6 +699,11 @@ export function RacingGame() {
                     }}
                   />
                 </div>
+                {(hud.prize ?? 0) > 0 && (
+                  <div className="mt-1 text-center font-display text-sm tabular-nums tracking-wider text-primary">
+                    PRÊMIO SE ESCAPAR: {formatDollars(hud.prize ?? 0)}
+                  </div>
+                )}
               </div>
             )}
 
