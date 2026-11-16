@@ -91,3 +91,6 @@ export function isDeveloperHost(hostname: string): boolean {
   const h = hostname.toLowerCase();
   return h === 'localhost' || h === '127.0.0.1' || h.startsWith('id-preview--') || h.startsWith('preview--') || h.endsWith('.lovableproject.com');
 }
+
+/** "$25.000" — dollars written with Brazilian thousands separators. */
+export const formatDollars = (n: number) => `$${Math.round(n).toLocaleString('pt-BR')}`;
