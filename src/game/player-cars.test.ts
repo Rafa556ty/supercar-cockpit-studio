@@ -1,52 +1,70 @@
 import { describe, it, expect } from 'vitest';
-import { DEFAULT_GARAGE, choosePlayerCar, claimCar, needsClaimConfirmation, canClaimFree, loadGarage, saveGarage, PLAYABLE_CARS } from './player-cars';
-describe('free claimable cars', () => {
-  it('Chiron and the five new cars are free to claim', () => {
-    for (const id of ['chiron', 'huracan-evo', 'tourbillon', 'utopia-roadster', 'huayra', 'demon'] as const)
-      expect(canClaimFree(DEFAULT_GARAGE, id)).toBe(true);
-  });
-  it('asks only while the car is not owned', () => {
-    expect(needsClaimConfirmation(DEFAULT_GARAGE, 'demon')).toBe(true);
-    expect(needsClaimConfirmation(claimCar(DEFAULT_GARAGE, 'demon', true), 'demon')).toBe(false);
-  });
-  it('does not unlock on cancellation', () => {
-    expect(claimCar(DEFAULT_GARAGE, 'chiron', false)).toEqual(DEFAULT_GARAGE);
-  });
-  it('confirmation unlocks and selects the car', () => {
-    expect(claimCar(DEFAULT_GARAGE, 'tourbillon', true)).toEqual({ owned: ['revuelto', 'tourbillon'], selectedCar: 'tourbillon' });
-  });
-  it('cannot select a car before claiming', () => {
-    expect(choosePlayerCar(DEFAULT_GARAGE, 'huayra').selectedCar).toBe('revuelto');
-  });
-  it('every car belongs to a brand tab', () => {
-    expect(PLAYABLE_CARS.filter(c => c.brand === 'ferrari').map(c => c.id)).toEqual(['laferrari']);
-    expect(PLAYABLE_CARS.filter(c => c.brand === 'pagani').map(c => c.id)).toEqual(['utopia-roadster', 'huayra']);
-  });
-});
-describe('garage persistence', () => {
-  const mem = () => { const m = new Map<string, string>(); return { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => { m.set(k, v); } }; };
-  it('keeps a claimed car selected after reload', () => { const s = mem(); saveGarage(s, claimCar(DEFAULT_GARAGE, 'demon', true)); expect(loadGarage(s)).toEqual({ owned: ['revuelto', 'demon'], selectedCar: 'demon' }); });
-  it('migrates the old Chiron save', () => { const s = mem(); s.setItem('garage-state-v1', JSON.stringify({ chironOwned: true, selectedCar: 'chiron' })); expect(loadGarage(s)).toEqual({ owned: ['revuelto', 'chiron'], selectedCar: 'chiron' }); });
-  it('never selects an unclaimed car', () => { const s = mem(); s.setItem('garage-state-v1', JSON.stringify({ chironOwned: false, selectedCar: 'chiron' })); expect(loadGarage(s).selectedCar).toBe('revuelto'); });
-});
+import { DEFAULT_GARAGE, STARTER_CAR, PLAYABLE_CARS, buyCar, carPrice, choosePlayerCar, devGarage, isDeveloperHost, loadBalance, loadGarage, saveBalance, saveGarage } from './player-cars';
 
-describe('Aventador SVJ giveaway', () => {
-  it('can be claimed for free from the store', () => {
-    expect(canClaimFree(DEFAULT_GARAGE, 'svj')).toBe(true);
-    expect(claimCar(DEFAULT_GARAGE, 'svj', true)).toEqual({ owned: ['revuelto', 'svj'], selectedCar: 'svj' });
+const mem = () => { const m = new Map<string, string>(); return { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => { m.set(k, v); } }; };
+
+describe('starter car and prices', () => {
+  it('the Mustang RTR is the free starter car', () => {
+    expect(STARTER_CAR).toBe('mustang-rtr');
+    expect(DEFAULT_GARAGE).toEqual({ owned: ['mustang-rtr'], selectedCar: 'mustang-rtr' });
+    expect(carPrice('mustang-rtr')).toBe(0);
+  });
+  it('store prices match the owner list', () => {
+    expect(carPrice('m2')).toBe(25_000);
+    expect(carPrice('m4-competition')).toBe(55_000);
+    expect(carPrice('huracan-evo')).toBe(120_000);
+    expect(carPrice('huayra')).toBe(280_000);
+    expect(carPrice('laferrari')).toBe(550_000);
+    expect(carPrice('utopia-roadster')).toBe(700_000);
+    expect(carPrice('revuelto')).toBe(850_000);
+    expect(carPrice('chiron')).toBe(1_200_000);
+    expect(carPrice('voiture-noire')).toBe(2_000_000);
+    expect(carPrice('tourbillon')).toBe(2_300_000);
+    expect(carPrice('jesko')).toBe(2_600_000);
+    expect(carPrice('chiron-ss300')).toBe(2_800_000);
+  });
+  it('M2 sits in the BMW tab and the Mustang in the Ford tab', () => {
+    expect(PLAYABLE_CARS.find(c => c.id === 'm2')?.brand).toBe('bmw');
+    expect(PLAYABLE_CARS.find(c => c.id === 'mustang-rtr')?.brand).toBe('ford');
   });
 });
 
-describe('BMW M4, Jesko and La Voiture Noire', () => {
-  it('BMW M4 Competition is claimed for free from the BMW tab and lands in the garage', () => {
-    expect(PLAYABLE_CARS.find(c => c.id === 'm4-competition')?.brand).toBe('bmw');
-    expect(canClaimFree(DEFAULT_GARAGE, 'm4-competition')).toBe(true);
-    expect(claimCar(DEFAULT_GARAGE, 'm4-competition', true)).toEqual({ owned: ['revuelto', 'm4-competition'], selectedCar: 'm4-competition' });
+describe('buying with dollars', () => {
+  it('buys a car, selects it and takes the price', () => {
+    expect(buyCar(DEFAULT_GARAGE, 30_000, 'm2')).toEqual({ garage: { owned: ['mustang-rtr', 'm2'], selectedCar: 'm2' }, balance: 5_000 });
   });
-  it('Jesko sits in the Koenigsegg tab and La Voiture Noire in the Bugatti tab', () => {
-    expect(PLAYABLE_CARS.find(c => c.id === 'jesko')?.brand).toBe('koenigsegg');
-    expect(PLAYABLE_CARS.find(c => c.id === 'voiture-noire')?.brand).toBe('bugatti');
-    expect(canClaimFree(DEFAULT_GARAGE, 'jesko')).toBe(true);
-    expect(canClaimFree(DEFAULT_GARAGE, 'voiture-noire')).toBe(true);
+  it('refuses when the balance is short', () => {
+    expect(buyCar(DEFAULT_GARAGE, 24_999, 'm2')).toBeNull();
+  });
+  it('cannot select a car before buying it', () => {
+    expect(choosePlayerCar(DEFAULT_GARAGE, 'revuelto').selectedCar).toBe('mustang-rtr');
+  });
+});
+
+describe('saving', () => {
+  it('keeps a bought car selected after reload', () => {
+    const s = mem(); saveGarage(s, buyCar(DEFAULT_GARAGE, 25_000, 'm2')!.garage);
+    expect(loadGarage(s)).toEqual({ owned: ['mustang-rtr', 'm2'], selectedCar: 'm2' });
+  });
+  it('a player never reloads into a car they do not own', () => {
+    const s = mem(); saveGarage(s, { owned: ['mustang-rtr'], selectedCar: 'chiron' });
+    expect(loadGarage(s).selectedCar).toBe('mustang-rtr');
+    expect(loadGarage(s, true).selectedCar).toBe('chiron');
+  });
+  it('remembers the dollar balance', () => {
+    const s = mem(); saveBalance(s, 41_000); expect(loadBalance(s)).toBe(41_000);
+  });
+});
+
+describe('developer gets every car free', () => {
+  it('Lovable preview and local dev are the developer', () => {
+    expect(isDeveloperHost('id-preview--bec0f7f6.lovable.app')).toBe(true);
+    expect(isDeveloperHost('localhost')).toBe(true);
+  });
+  it('the published link charges', () => {
+    expect(isDeveloperHost('supercar-cockpit-studio.lovable.app')).toBe(false);
+  });
+  it('developer garage owns every car without buying', () => {
+    expect(devGarage(DEFAULT_GARAGE).owned).toHaveLength(PLAYABLE_CARS.length);
   });
 });
