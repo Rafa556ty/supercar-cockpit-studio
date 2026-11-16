@@ -23,7 +23,7 @@ export const TRANSLATIONS = {
     demoBadge: "DEMO",
     modeSelect: "MODO DE JOGO",
     modeFree: "Modo Corrida",
-    modePolice: "Fuga da Polícia (Shelby GT500)",
+    modePolice: "Fuga da Polícia (Lamborghini Aventador)",
     policeEscapeTag: "POLICE ESCAPE",
     instructions: [
       { text: "Segure ACELERAR para correr" },
@@ -89,7 +89,7 @@ export const TRANSLATIONS = {
     demoBadge: "DEMO",
     modeSelect: "MODO DE JOGO",
     modeFree: "Modo Corrida",
-    modePolice: "Fuga à Polícia (Shelby GT500)",
+    modePolice: "Fuga à Polícia (Lamborghini Aventador)",
     policeEscapeTag: "POLICE ESCAPE",
     instructions: [
       { text: "Segura ACELERAR para correr" },
@@ -155,7 +155,7 @@ export const TRANSLATIONS = {
     demoBadge: "DEMO",
     modeSelect: "GAME MODE",
     modeFree: "Highway Dash",
-    modePolice: "Police Escape (Shelby GT500)",
+    modePolice: "Police Escape (Lamborghini Aventador)",
     policeEscapeTag: "POLICE ESCAPE",
     instructions: [
       { text: "Hold ACCELERATE to speed up" },
@@ -221,7 +221,7 @@ export const TRANSLATIONS = {
     demoBadge: "DEMO",
     modeSelect: "MODALITÀ DI GIOCO",
     modeFree: "Corsa Libera",
-    modePolice: "Fuga dalla Polizia (Shelby GT500)",
+    modePolice: "Fuga dalla Polizia (Lamborghini Aventador)",
     policeEscapeTag: "POLICE ESCAPE",
     instructions: [
       { text: "Tieni premuto ACCELERATORE per correre" },
@@ -287,7 +287,7 @@ export const TRANSLATIONS = {
     demoBadge: "DEMO",
     modeSelect: "MODE DE JEU",
     modeFree: "Course Libre",
-    modePolice: "Course-Poursuite (Shelby GT500)",
+    modePolice: "Course-Poursuite (Lamborghini Aventador)",
     policeEscapeTag: "POLICE ESCAPE",
     instructions: [
       { text: "Maintenez ACCÉLÉRER pour foncer" },
@@ -353,7 +353,7 @@ export const TRANSLATIONS = {
     demoBadge: "DEMO",
     modeSelect: "ゲームモード",
     modeFree: "ハイウェイラン",
-    modePolice: "ポリスエスケープ (Shelby GT500)",
+    modePolice: "ポリスエスケープ (Lamborghini Aventador)",
     policeEscapeTag: "POLICE ESCAPE",
     instructions: [
       { text: "アクセル長押しで加速" },
