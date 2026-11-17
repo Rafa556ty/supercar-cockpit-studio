@@ -8,6 +8,7 @@ export type CarPerf = { /** km/h */ top: number; /** seconds */ zeroTo100: numbe
 export const CAR_PERF: Record<PlayerCar, CarPerf> = {
   "mustang-rtr": { top: 280, zeroTo100: 3.7 },
   m2: { top: 285, zeroTo100: 4.0 },
+  "m8-competition": { top: 305, zeroTo100: 3.2 },
   "m4-competition": { top: 290, zeroTo100: 3.8 },
   demon: { top: 270, zeroTo100: 2.4 },
   "huracan-evo": { top: 325, zeroTo100: 2.9 },

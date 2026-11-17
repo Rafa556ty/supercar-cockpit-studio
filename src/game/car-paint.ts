@@ -29,6 +29,7 @@ export const PART_MATERIALS: Record<PlayerCar, Record<CarPart, RegExp>> = {
   "chiron-ss300": { body: /^CSR2_CarPaint$/, seats: /^CSR2_Interior$/, rims: /^CSR2_Wheel1A_Rim$/, calipers: /^CSR2_Calliper_Color$/ },
   // SVJ paint lives in a texture atlas; only its flat body/bonnet layers recolour cleanly.
   svj: { body: /^svj_paint$/, seats: NEVER, rims: NEVER, calipers: NEVER },
+  "m8-competition": { body: /^m8f92_CarPaint$|^m8f92_CarPaint2$/, seats: NEVER, rims: /^m8_wheel_m8f92_Rim2A$/, calipers: /^m8f92_Calliper_Color$/ },
   "m4-competition": { body: /^m4car_body1$|^m4car_hood1$|^m4car_bodykit1$/, seats: NEVER, rims: /^rimRim_072_Garage1$/, calipers: /^red_caliper$/ },
   jesko: { body: /^body1$/, seats: NEVER, rims: /^rim_chrome$/, calipers: /^paint1Mtlgreen$/ },
   "voiture-noire": { body: /2019Paint_Material$/, seats: NEVER, rims: /3DWheel1A_Material$/, calipers: /CalliperGloss_Material$/ },

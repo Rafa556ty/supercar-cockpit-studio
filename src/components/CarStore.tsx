@@ -10,12 +10,13 @@ import revueltoPhoto from '@/assets/store/revuelto-store.jpg.asset.json';
 import m2Photo from '@/assets/store/bmw-m2-store.jpg.asset.json';
 import mustangPhoto from '@/assets/store/mustang-rtr-store.jpg.asset.json';
 import m4Photo from '@/assets/store/bmw-m4-competition.jpg';
+import m8Photo from '@/assets/store/bmw-m8-competition.jpg';
 import jeskoPhoto from '@/assets/store/koenigsegg-jesko.jpg';
 import voitureNoirePhoto from '@/assets/store/bugatti-voiture-noire.jpg';
 
 const CAR_PHOTOS: Partial<Record<PlayerCar, string>> = {
   chiron: chironPhoto.url, svj: svjPhoto.url, revuelto: revueltoPhoto.url, m2: m2Photo.url, 'mustang-rtr': mustangPhoto.url,
-  'm4-competition': m4Photo, jesko: jeskoPhoto, 'voiture-noire': voitureNoirePhoto,
+  'm4-competition': m4Photo, 'm8-competition': m8Photo, jesko: jeskoPhoto, 'voiture-noire': voitureNoirePhoto,
 };
 
 /** Store tabs: the Revuelto gets its own tab, then one tab per brand. */

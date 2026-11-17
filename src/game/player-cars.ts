@@ -1,5 +1,5 @@
 // Playable cars, their store price in dollars, and the saved garage.
-export type PlayerCar = 'mustang-rtr' | 'm2' | 'revuelto' | 'chiron' | 'huracan-evo' | 'tourbillon' | 'utopia-roadster' | 'huayra' | 'demon' | 'chiron-ss300' | 'laferrari' | 'svj' | 'm4-competition' | 'jesko' | 'voiture-noire';
+export type PlayerCar = 'mustang-rtr' | 'm2' | 'revuelto' | 'chiron' | 'huracan-evo' | 'tourbillon' | 'utopia-roadster' | 'huayra' | 'demon' | 'chiron-ss300' | 'laferrari' | 'svj' | 'm4-competition' | 'm8-competition' | 'jesko' | 'voiture-noire';
 export type Brand = 'ford' | 'lamborghini' | 'ferrari' | 'bugatti' | 'koenigsegg' | 'pagani' | 'dodge' | 'bmw';
 
 export type PlayableSpec = {
@@ -31,6 +31,7 @@ export const PLAYABLE_CARS: PlayableSpec[] = [
   { id: 'demon', name: 'Dodge Challenger SRT Demon', brand: 'dodge', price: 1_200_000, sound: 'revuelto' },
   { id: 'm2', name: 'BMW M2 G87 Widebody 2026', brand: 'bmw', price: 600_000, sound: 'revuelto' },
   { id: 'm4-competition', name: 'BMW M4 Competition 2025', brand: 'bmw', price: 1_000_000, sound: 'revuelto' },
+  { id: 'm8-competition', name: 'BMW M8 Competition Coupé', brand: 'bmw', price: 1_400_000, sound: 'revuelto' },
 ];
 
 export const carSpec = (id: PlayerCar) => PLAYABLE_CARS.find(c => c.id === id)!;

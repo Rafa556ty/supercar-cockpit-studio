@@ -30,6 +30,7 @@ import chironSsAsset from "@/assets/models/bugatti_chiron_super_sport_300.glb.as
 import laferrariAsset from "@/assets/models/2014_ferrari_laferrari.glb.asset.json";
 import svjAsset from "@/assets/models/aventador_svj_sdc.glb.asset.json";
 import demonAsset from "@/assets/models/dodge_challenger_srt_demon_sdc.glb.asset.json";
+import m8Asset from "@/assets/models/bmw-m8-competition.glb.asset.json";
 import m4Asset from "@/assets/models/2025_bmw_m4_competition.glb.asset.json";
 import jeskoAsset from "@/assets/models/2019_koenigsegg_jesko.glb.asset.json";
 import voitureNoireAsset from "@/assets/models/2019_bugatti_la_voiture_noire.glb.asset.json";
@@ -50,6 +51,7 @@ export type ModelKey =
   | "laferrari"
   | "svj"
   | "m4-competition"
+  | "m8-competition"
   | "jesko"
   | "voiture-noire"
   | "mustang-rtr"
@@ -84,6 +86,7 @@ export const MODEL_SPECS: Record<ModelKey, ModelSpec> = {
   svj: { url: svjAsset.url, length: 4.943, yaw: Math.PI }, // file nose points +Z
   // Owner-supplied playable cars (meshopt + 1024 px WebP); all three noses point +Z in the file.
   "m4-competition": { url: m4Asset.url, length: 4.794, yaw: Math.PI },
+  "m8-competition": { url: m8Asset.url, length: 4.867, yaw: Math.PI },
   jesko: { url: jeskoAsset.url, length: 4.61, yaw: Math.PI },
   "voiture-noire": { url: voitureNoireAsset.url, length: 4.544, yaw: Math.PI },
   // Owner-supplied (meshopt + 1024 px WebP); nose found from the red rear lenses.
@@ -414,9 +417,9 @@ function paintBmw(root: THREE.Object3D) {
 }
 
 /** Newer playable cars: wheels found by material name so they can spin and steer. */
-const NEW_CAR_KEYS = new Set<ModelKey>(["huracan-evo", "tourbillon", "utopia-roadster", "huayra", "demon", "chiron-ss300", "laferrari", "svj", "m4-competition", "jesko", "voiture-noire", "mustang-rtr", "m2"]);
+const NEW_CAR_KEYS = new Set<ModelKey>(["huracan-evo", "tourbillon", "utopia-roadster", "huayra", "demon", "chiron-ss300", "laferrari", "svj", "m4-competition", "m8-competition", "jesko", "voiture-noire", "mustang-rtr", "m2"]);
 /** Cars whose wheel parts are re-pivoted on one hub per corner (see wheel-corners.ts). */
-const SHARED_HUB_KEYS = new Set<ModelKey>(["svj", "m4-competition", "jesko", "voiture-noire", "m2"]);
+const SHARED_HUB_KEYS = new Set<ModelKey>(["svj", "m4-competition", "m8-competition", "jesko", "voiture-noire", "m2"]);
 export const NEW_CAR_WHEEL = /wheel|tire|tyre|rim|brakedis|brake\.|rotor|^ext_disc$|1004bodyunrefunblend1063/i;
 const isNewCarWheel = (o: THREE.Mesh) => {
   const n = (o.material as THREE.Material).name;

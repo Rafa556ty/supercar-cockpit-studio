@@ -22,6 +22,7 @@ export const PLAYER_LAMPS: Partial<Record<PlayerCar, LampSpec>> = {
   huayra: { lamp: /^pag_lights$|^pag_runninglight$/, tail: /^pag_taillight_L$/, brake: /^pag_brakelight$/ },
   demon: { lamp: /^lightglass$/, tail: /^redglass$/ },
   "chiron-ss300": { lamp: /^CSR2_Light$|^headlight$|^Park_light$/, tail: /^GlassRed$|^brake_park_light$/, brake: /^brake_light$/ },
+  "m8-competition": { lamp: /^m8f92_lowbeam$|^m8f92_runninglight3$/, tail: /^m8f92_taillight$|^m8f92_glass_red$/ },
   "m4-competition": { lamp: /^m4car_emissive1$/, tail: /$^/ },
   jesko: { lamp: /^Lights$|^light_ref$/, tail: /^GlassRedMtl$/ },
   "voiture-noire": { lamp: /2019LightA_Material$/, tail: /^RED_GLASS$/ },
