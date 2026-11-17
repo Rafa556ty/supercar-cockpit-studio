@@ -24,6 +24,7 @@ export const COCKPIT_SEATS: Partial<Record<PlayerCar, CockpitSeat>> = {
   jesko: { eye: [-0.31, 0.93, 0.08] },
   "utopia-roadster": { eye: [-0.33, 1.0, 0.15] },
   huayra: { eye: [-0.4, 1.0, 0.15] },
+  "m8-competition": { eye: [-0.38, 1.1, 0.25] },
   "m4-competition": { eye: [-0.38, 1.12, 0.3] },
 };
 
